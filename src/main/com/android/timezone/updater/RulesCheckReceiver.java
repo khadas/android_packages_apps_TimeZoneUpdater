@@ -54,12 +54,12 @@ import libcore.io.Streams;
  * The data app makes its payload available via a {@link TimeZoneRulesDataContract specified}
  * {@link android.content.ContentProvider} with the URI {@link TimeZoneRulesDataContract#AUTHORITY}.
  *
- * <p>If the {@link TimeZoneRulesDataContract#COLUMN_OPERATION operation} is an
- * {@link TimeZoneRulesDataContract#OPERATION_INSTALL install request}, the time zone data format
- * {@link TimeZoneRulesDataContract#COLUMN_DISTRO_MAJOR_VERSION major version} and
- * {@link TimeZoneRulesDataContract#COLUMN_DISTRO_MINOR_VERSION minor version},
- * {@link TimeZoneRulesDataContract#COLUMN_RULES_VERSION IANA rules version}, and
- * {@link TimeZoneRulesDataContract#COLUMN_REVISION revision} are checked to see if they can be
+ * <p>If the {@link TimeZoneRulesDataContract.Operation#TYPE operation type} is an
+ * {@link TimeZoneRulesDataContract.Operation#TYPE_INSTALL install request}, then the time zone data
+ * format {@link TimeZoneRulesDataContract.Operation#DISTRO_MAJOR_VERSION major version} and
+ * {@link TimeZoneRulesDataContract.Operation#DISTRO_MINOR_VERSION minor version}, the
+ * {@link TimeZoneRulesDataContract.Operation#RULES_VERSION IANA rules version}, and the
+ * {@link TimeZoneRulesDataContract.Operation#REVISION revision} are checked to see if they can be
  * applied to the device. If the data is valid the {@link RulesCheckReceiver} will obtain the
  * payload from the data app content provider via
  * {@link android.content.ContentProvider#openFile(Uri, String)} and pass the data to the system
@@ -104,15 +104,15 @@ public class RulesCheckReceiver extends BroadcastReceiver {
 
         // Try to do what the data app asked.
         Log.d(TAG, "Time zone operation: " + operation + " received.");
-        switch (operation.mOperationString) {
-            case TimeZoneRulesDataContract.OPERATION_NO_OP:
+        switch (operation.mType) {
+            case TimeZoneRulesDataContract.Operation.TYPE_NO_OP:
                 // No-op. Just acknowledge the check.
                 handleCheckComplete(token, true /* success */);
                 break;
-            case TimeZoneRulesDataContract.OPERATION_UNINSTALL:
+            case TimeZoneRulesDataContract.Operation.TYPE_UNINSTALL:
                 handleUninstall(token);
                 break;
-            case TimeZoneRulesDataContract.OPERATION_INSTALL:
+            case TimeZoneRulesDataContract.Operation.TYPE_INSTALL:
                 handleCopyAndInstall(context, token, operation.mDistroFormatVersion,
                         operation.mDistroRulesVersion);
                 break;
@@ -126,13 +126,13 @@ public class RulesCheckReceiver extends BroadcastReceiver {
 
     private DistroOperation getOperation(Context context) {
         Cursor c = context.getContentResolver()
-                .query(TimeZoneRulesDataContract.OPERATION_URI,
+                .query(TimeZoneRulesDataContract.Operation.CONTENT_URI,
                         new String[] {
-                                TimeZoneRulesDataContract.COLUMN_OPERATION,
-                                TimeZoneRulesDataContract.COLUMN_DISTRO_MAJOR_VERSION,
-                                TimeZoneRulesDataContract.COLUMN_DISTRO_MINOR_VERSION,
-                                TimeZoneRulesDataContract.COLUMN_RULES_VERSION,
-                                TimeZoneRulesDataContract.COLUMN_REVISION
+                                TimeZoneRulesDataContract.Operation.TYPE,
+                                TimeZoneRulesDataContract.Operation.DISTRO_MAJOR_VERSION,
+                                TimeZoneRulesDataContract.Operation.DISTRO_MINOR_VERSION,
+                                TimeZoneRulesDataContract.Operation.RULES_VERSION,
+                                TimeZoneRulesDataContract.Operation.REVISION
                         },
                         null /* selection */, null /* selectionArgs */, null /* sortOrder */);
         try (Cursor cursor = c) {
@@ -146,16 +146,16 @@ public class RulesCheckReceiver extends BroadcastReceiver {
             }
 
             try {
-                String operation = cursor.getString(0);
+                String type = cursor.getString(0);
                 DistroFormatVersion distroFormatVersion = null;
                 DistroRulesVersion distroRulesVersion = null;
-                if (TimeZoneRulesDataContract.OPERATION_INSTALL.equals(operation)) {
+                if (TimeZoneRulesDataContract.Operation.TYPE_INSTALL.equals(type)) {
                     distroFormatVersion = new DistroFormatVersion(cursor.getInt(1),
                             cursor.getInt(2));
                     distroRulesVersion = new DistroRulesVersion(cursor.getString(3),
                             cursor.getInt(4));
                 }
-                return new DistroOperation(operation, distroFormatVersion, distroRulesVersion);
+                return new DistroOperation(type, distroFormatVersion, distroRulesVersion);
             } catch (Exception e) {
                 Log.e(TAG, "Error looking up distro operation / version", e);
                 return null;
@@ -199,12 +199,13 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         ParcelFileDescriptor inputFileDescriptor;
         try {
             inputFileDescriptor = context.getContentResolver().openFileDescriptor(
-                    TimeZoneRulesDataContract.DATA_URI, "r");
+                    TimeZoneRulesDataContract.Data.CONTENT_URI, "r");
             if (inputFileDescriptor == null) {
                 throw new FileNotFoundException("ContentProvider returned null");
             }
         } catch (FileNotFoundException e) {
-            Log.e(TAG, "Unable to open file descriptor" + TimeZoneRulesDataContract.DATA_URI, e);
+            Log.e(TAG, "Unable to open file descriptor"
+                    + TimeZoneRulesDataContract.Data.CONTENT_URI, e);
             return null;
         }
         return inputFileDescriptor;
@@ -301,13 +302,13 @@ public class RulesCheckReceiver extends BroadcastReceiver {
     }
 
     private static class DistroOperation {
-        final String mOperationString;
+        final String mType;
         final DistroFormatVersion mDistroFormatVersion;
         final DistroRulesVersion mDistroRulesVersion;
 
-        DistroOperation(String operationString, DistroFormatVersion distroFormatVersion,
+        DistroOperation(String type, DistroFormatVersion distroFormatVersion,
                 DistroRulesVersion distroRulesVersion) {
-            mOperationString = operationString;
+            mType = type;
             mDistroFormatVersion = distroFormatVersion;
             mDistroRulesVersion = distroRulesVersion;
         }
@@ -315,7 +316,7 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         @Override
         public String toString() {
             return "DistroOperation{" +
-                    "mOperationString='" + mOperationString + '\'' +
+                    "mType='" + mType + '\'' +
                     ", mDistroFormatVersion=" + mDistroFormatVersion +
                     ", mDistroRulesVersion=" + mDistroRulesVersion +
                     '}';
