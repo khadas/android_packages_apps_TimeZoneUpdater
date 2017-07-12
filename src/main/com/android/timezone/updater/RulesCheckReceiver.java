@@ -54,14 +54,14 @@ import libcore.io.Streams;
  * The data app makes its payload available via a {@link TimeZoneRulesDataContract specified}
  * {@link android.content.ContentProvider} with the URI {@link TimeZoneRulesDataContract#AUTHORITY}.
  *
- * <p>If the {@link TimeZoneRulesDataContract.Operation#TYPE operation type} is an
+ * <p>If the {@link TimeZoneRulesDataContract.Operation#COLUMN_TYPE operation type} is an
  * {@link TimeZoneRulesDataContract.Operation#TYPE_INSTALL install request}, then the time zone data
- * format {@link TimeZoneRulesDataContract.Operation#DISTRO_MAJOR_VERSION major version} and
- * {@link TimeZoneRulesDataContract.Operation#DISTRO_MINOR_VERSION minor version}, the
- * {@link TimeZoneRulesDataContract.Operation#RULES_VERSION IANA rules version}, and the
- * {@link TimeZoneRulesDataContract.Operation#REVISION revision} are checked to see if they can be
- * applied to the device. If the data is valid the {@link RulesCheckReceiver} will obtain the
- * payload from the data app content provider via
+ * format {@link TimeZoneRulesDataContract.Operation#COLUMN_DISTRO_MAJOR_VERSION major version} and
+ * {@link TimeZoneRulesDataContract.Operation#COLUMN_DISTRO_MINOR_VERSION minor version}, the
+ * {@link TimeZoneRulesDataContract.Operation#COLUMN_RULES_VERSION IANA rules version}, and the
+ * {@link TimeZoneRulesDataContract.Operation#COLUMN_REVISION revision} are checked to see if they
+ * can be applied to the device. If the data is valid the {@link RulesCheckReceiver} will obtain
+ * the payload from the data app content provider via
  * {@link android.content.ContentProvider#openFile(Uri, String)} and pass the data to the system
  * server for installation via the
  * {@link RulesManager#requestInstall(ParcelFileDescriptor, byte[], Callback)}.
@@ -128,11 +128,11 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         Cursor c = context.getContentResolver()
                 .query(TimeZoneRulesDataContract.Operation.CONTENT_URI,
                         new String[] {
-                                TimeZoneRulesDataContract.Operation.TYPE,
-                                TimeZoneRulesDataContract.Operation.DISTRO_MAJOR_VERSION,
-                                TimeZoneRulesDataContract.Operation.DISTRO_MINOR_VERSION,
-                                TimeZoneRulesDataContract.Operation.RULES_VERSION,
-                                TimeZoneRulesDataContract.Operation.REVISION
+                                TimeZoneRulesDataContract.Operation.COLUMN_TYPE,
+                                TimeZoneRulesDataContract.Operation.COLUMN_DISTRO_MAJOR_VERSION,
+                                TimeZoneRulesDataContract.Operation.COLUMN_DISTRO_MINOR_VERSION,
+                                TimeZoneRulesDataContract.Operation.COLUMN_RULES_VERSION,
+                                TimeZoneRulesDataContract.Operation.COLUMN_REVISION
                         },
                         null /* selection */, null /* selectionArgs */, null /* sortOrder */);
         try (Cursor cursor = c) {
@@ -199,13 +199,13 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         ParcelFileDescriptor inputFileDescriptor;
         try {
             inputFileDescriptor = context.getContentResolver().openFileDescriptor(
-                    TimeZoneRulesDataContract.Data.CONTENT_URI, "r");
+                    TimeZoneRulesDataContract.Operation.CONTENT_URI, "r");
             if (inputFileDescriptor == null) {
                 throw new FileNotFoundException("ContentProvider returned null");
             }
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Unable to open file descriptor"
-                    + TimeZoneRulesDataContract.Data.CONTENT_URI, e);
+                    + TimeZoneRulesDataContract.Operation.CONTENT_URI, e);
             return null;
         }
         return inputFileDescriptor;
