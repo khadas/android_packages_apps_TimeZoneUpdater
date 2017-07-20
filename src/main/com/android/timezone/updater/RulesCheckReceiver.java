@@ -69,7 +69,6 @@ import libcore.io.Streams;
  * server for installation via the
  * {@link RulesManager#requestInstall(ParcelFileDescriptor, byte[], Callback)}.
  */
-// TODO(nfuller): Improve logging
 public class RulesCheckReceiver extends BroadcastReceiver {
     final static String TAG = "RulesCheckReceiver";
 
@@ -86,10 +85,10 @@ public class RulesCheckReceiver extends BroadcastReceiver {
                     + ", action=" + intent.getAction());
             return;
         }
-
         mRulesManager = (RulesManager) context.getSystemService("timezone");
 
         byte[] token = intent.getByteArrayExtra(RulesUpdaterContract.EXTRA_CHECK_TOKEN);
+        EventLogTags.writeTimezoneCheckTriggerReceived(Arrays.toString(token));
 
         if (shouldUninstallCurrentInstall(context)) {
             Log.i(TAG, "Device should be returned to having no time zone distro installed, issuing"
@@ -105,7 +104,7 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         // the data application.
 
         // Obtain the information about what the data app is telling us to do.
-        DistroOperation operation = getOperation(context);
+        DistroOperation operation = getOperation(context, token);
         if (operation == null) {
             Log.w(TAG, "Unable to read time zone operation. Halting check.");
             boolean success = true; // No point in retrying.
@@ -160,7 +159,8 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         return applicationInfo.isPrivilegedApp() && !applicationInfo.isUpdatedSystemApp();
     }
 
-    private DistroOperation getOperation(Context context) {
+    private DistroOperation getOperation(Context context, byte[] tokenBytes) {
+        EventLogTags.writeTimezoneCheckReadFromDataApp(Arrays.toString(tokenBytes));
         Cursor c = context.getContentResolver()
                 .query(TimeZoneRulesDataContract.Operation.CONTENT_URI,
                         new String[] {
@@ -205,6 +205,7 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         RulesState rulesState = mRulesManager.getRulesState();
         if (!rulesState.isDistroFormatVersionSupported(distroFormatVersion)
             || rulesState.isSystemVersionNewerThan(distroRulesVersion)) {
+            Log.d(TAG, "Candidate distro is not supported or is not better than system version.");
             // Nothing to do.
             handleCheckComplete(checkToken, true /* success */);
             return;
@@ -222,6 +223,7 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         // "seek" the ParcelFileDescriptor it can do so with fewer processes affected.
         File file = copyDataToLocalFile(context, inputFileDescriptor);
         if (file == null) {
+            Log.e(TAG, "Failed to copy distro data to a file.");
             // It's possible this may get better if the problem is related to storage space so we
             // signal success := false so it may be retried.
             boolean success = false;
@@ -302,8 +304,10 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         // Adopt the distroFileDescriptor here so the local file descriptor is closed, whatever the
         // outcome.
         try (ParcelFileDescriptor pfd = distroFileDescriptor) {
+            String tokenString = Arrays.toString(checkToken);
+            EventLogTags.writeTimezoneCheckRequestInstall(tokenString);
             int requestStatus = mRulesManager.requestInstall(pfd, checkToken, callback);
-            Log.i(TAG, "requestInstall() called, token=" + Arrays.toString(checkToken)
+            Log.i(TAG, "requestInstall() called, token=" + tokenString
                     + ", returned " + requestStatus);
         } catch (Exception e) {
             Log.e(TAG, "Error calling requestInstall()", e);
@@ -319,8 +323,10 @@ public class RulesCheckReceiver extends BroadcastReceiver {
         };
 
         try {
+            String tokenString = Arrays.toString(checkToken);
+            EventLogTags.writeTimezoneCheckRequestUninstall(tokenString);
             int requestStatus = mRulesManager.requestUninstall(checkToken, callback);
-            Log.i(TAG, "requestUninstall() called, token=" + Arrays.toString(checkToken)
+            Log.i(TAG, "requestUninstall() called, token=" + tokenString
                     + ", returned " + requestStatus);
         } catch (Exception e) {
             Log.e(TAG, "Error calling requestUninstall()", e);
@@ -329,9 +335,10 @@ public class RulesCheckReceiver extends BroadcastReceiver {
 
     private void handleCheckComplete(final byte[] token, final boolean success) {
         try {
+            String tokenString = Arrays.toString(token);
+            EventLogTags.writeTimezoneCheckRequestNothing(tokenString, success ? 1 : 0);
             mRulesManager.requestNothing(token, success);
-            Log.i(TAG, "requestNothing() called, token=" + Arrays.toString(token)
-                    + ", success=" + success);
+            Log.i(TAG, "requestNothing() called, token=" + tokenString + ", success=" + success);
         } catch (Exception e) {
             Log.e(TAG, "Error calling requestNothing()", e);
         }
