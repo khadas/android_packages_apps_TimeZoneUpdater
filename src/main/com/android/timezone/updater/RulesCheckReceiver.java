@@ -69,10 +69,7 @@ import libcore.io.Streams;
  * server for installation via the
  * {@link RulesManager#requestInstall(ParcelFileDescriptor, byte[], Callback)}.
  */
-// TODO(nfuller): Prevent multiple broadcasts being handled at once?
 // TODO(nfuller): Improve logging
-// TODO(nfuller): Make the rules check async?
-// TODO(nfuller): Need async generally for SystemService calls from BroadcastReceiver?
 public class RulesCheckReceiver extends BroadcastReceiver {
     final static String TAG = "RulesCheckReceiver";
 
@@ -80,6 +77,9 @@ public class RulesCheckReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        // No need to make this synchronized, onReceive() is called on the main thread, there's no
+        // important object state that could be corrupted and the check token allows for ordering
+        // issues.
         if (!RulesUpdaterContract.ACTION_TRIGGER_RULES_UPDATE_CHECK.equals(intent.getAction())) {
             // Unknown. Do nothing.
             Log.w(TAG, "Unrecognized intent action received: " + intent
