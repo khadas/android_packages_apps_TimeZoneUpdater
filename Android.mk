@@ -19,6 +19,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := time_zone_updater
 LOCAL_SRC_FILES := $(call all-java-files-under, src/main)
+# Also include generated EventLogTags from the .logtags file.
+LOCAL_SRC_FILES += $(call all-logtags-files-under, src/main)
 LOCAL_STATIC_JAVA_LIBRARIES := time_zone_distro
 include $(BUILD_STATIC_JAVA_LIBRARY)
 
