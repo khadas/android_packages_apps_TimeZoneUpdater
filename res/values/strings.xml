@@ -16,6 +16,6 @@
  -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Name of the application as seen in the applications info settings page. [CHAR LIMIT=30] -->
+    <!-- Name of the application as seen in the applications info settings page. [CHAR LIMIT=50] -->
     <string name="app_name">Time Zone Updater</string>
 </resources>
