@@ -29,7 +29,7 @@
                 android:permission="android.permission.TRIGGER_TIME_ZONE_RULES_CHECK"
                 android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.timezone.TRIGGER_RULES_UPDATE_CHECK" />
+                <action android:name="com.android.intent.action.timezone.TRIGGER_RULES_UPDATE_CHECK" />
             </intent-filter>
         </receiver>
 
