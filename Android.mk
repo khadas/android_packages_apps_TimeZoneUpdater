@@ -32,4 +32,5 @@ LOCAL_PACKAGE_NAME := TimeZoneUpdater
 LOCAL_PRIVATE_PLATFORM_APIS := true
 LOCAL_CERTIFICATE := platform
 LOCAL_PRIVILEGED_MODULE := true
+LOCAL_REQUIRED_MODULES := com.android.timezone.updater.xml
 include $(BUILD_PACKAGE)
